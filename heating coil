@@ -1,0 +1,82 @@
+#include <LiquidCrystal.h>
+  #include <OneWire.h>
+  #include <DallasTemperature.h>
+  #include <Wire.h>
+
+  #define ONE_WIRE_BUS 7
+
+	const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2, analogInPin = A0;
+  float temp;
+  int phvalue = 0; 
+  int sensorValue = 0;
+  unsigned long int avgValue;
+  int buf[10],t=0;
+
+	LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+  OneWire oneWire(ONE_WIRE_BUS);
+
+  DallasTemperature sensors(&oneWire);
+	
+	void setup()
+  {
+    sensors.begin();
+	  lcd.begin(16, 2);
+    Serial.begin(9600);
+    pinMode(8,OUTPUT);
+
+    while(!Serial.available()){}
+    temp = Serial.parseFloat();
+    digitalWrite(8,HIGH);
+	}	
+	void loop()
+  {
+    for(int i=0;i<10;i++) 
+    { 
+      buf[i]=analogRead(analogInPin);
+      delay(30);
+    }
+    
+    for(int i=0;i<9;i++)
+    {
+      for(int j=i+1;j<10;j++)
+      {
+        if(buf[i]>buf[j])
+        {
+          t=buf[i];
+          buf[i]=buf[j];
+          buf[j]=t;
+        }
+      }
+    }
+    
+    avgValue=0;
+    for(int i=2;i<8;i++)
+    avgValue+=buf[i];
+  
+    float pHVol=(float)avgValue*5.0/1024/5.4;
+    float phValue = -5.70 * pHVol + 18.1;
+    phValue = 14.2 - phValue;
+
+    lcd.setCursor(0,0);  
+    lcd.print("pH Value : ");
+    lcd.setCursor(12, 0);  
+    lcd.print(phValue);
+
+    sensors.requestTemperatures();
+    float temperatureC = (sensors.getTempCByIndex(0));
+    float temperatureF = ((sensors.getTempCByIndex(0) * 9.0) / 5.0 + 32.0);
+    
+    lcd.setCursor(0, 1);
+    lcd.print(temperatureC);
+    lcd.print("C / ");
+    lcd.print(temperatureF);
+    lcd.print("F");
+
+    if(temperatureC >= temp)
+    {
+      digitalWrite(8,LOW);
+    }
+    else
+      digitalWrite(8,HIGH);
+  }
